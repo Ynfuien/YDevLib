@@ -1,0 +1,1 @@
+Utility library used in my plugins. I don't guarantee any compatibility between versions.
