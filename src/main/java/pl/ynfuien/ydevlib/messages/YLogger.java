@@ -41,6 +41,6 @@ public class YLogger {
     public static void debug(String message) {
         if (!debugging) return;
 
-        Messenger.send(console, String.format("%s <dark_aqua>[Debug] %s", prefix, message));
+        Messenger.send(console, String.format("%s<dark_aqua>[Debug] %s", prefix, message));
     }
 }
