@@ -13,15 +13,24 @@ public class YLogger {
     private static String prefix;
     private static boolean debugging = false;
 
+    /**
+     * Sets up logger with provided prefix and ComponentLogger.
+     */
     public static void setup(String prefix, ComponentLogger componentLogger) {
         YLogger.prefix = prefix;
         YLogger.componentLogger = componentLogger;
     }
 
+    /**
+     * Sets whether debug messages should be logged.
+     */
     public static void setDebugging(boolean enabled) {
         debugging = enabled;
     }
 
+    /**
+     * Logs message at the INFO level.
+     */
     public static void info(String message) {
         Messenger.send(console, prefix + message);
     }
@@ -30,17 +39,26 @@ public class YLogger {
         Messenger.send(console, prefix + message, placeholders);
     }
 
+    /**
+     * Logs message at the WARN level.
+     */
     public static void warn(String message) {
         componentLogger.warn(MiniMessage.miniMessage().deserialize(message));
     }
 
+    /**
+     * Logs message at the ERROR level.
+     */
     public static void error(String message) {
         componentLogger.error(MiniMessage.miniMessage().deserialize(message));
     }
 
+    /**
+     * Logs message at the INFO level, but with [Debug] prefix.
+     */
     public static void debug(String message) {
         if (!debugging) return;
 
-        Messenger.send(console, String.format("%s<dark_aqua>[Debug] %s", prefix, message));
+        info("<dark_aqua>[Debug] " + message);
     }
 }

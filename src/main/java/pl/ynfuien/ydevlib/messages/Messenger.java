@@ -17,6 +17,11 @@ public class Messenger {
     private final static Pattern PLUGIN_PLACEHOLDER_FLAGS_PATTERN = Pattern.compile("(?<=[{])[!@#]+(?=([^{}]+)[}])");
 
 
+    /**
+     * Sends message to a receiver. Parses:<br/>
+     * - MiniMessage
+     * - PlaceholderAPI
+     */
     public static void send(CommandSender receiver, String message) {
         message = message.replace('§', '&');
         message = ColorFormatter.parsePAPI(receiver, message);
@@ -27,6 +32,12 @@ public class Messenger {
         receiver.sendMessage(formatted);
     }
 
+    /**
+     * Sends message to a receiver. Parses:<br/>
+     * - MiniMessage
+     * - PlaceholderAPI
+     * - Provided plugin placeholders
+     */
     public static void send(CommandSender receiver, String message, HashMap<String, Object> placeholders) {
         if (receiver == null) return;
         if (message == null) return;
@@ -37,6 +48,12 @@ public class Messenger {
         receiver.sendMessage(formatted);
     }
 
+    /**
+     * Parses provided message with:<br/>
+     * - MiniMessage
+     * - PlaceholderAPI
+     * - And plugin placeholders
+     */
     public static Component parseMessage(CommandSender sender, String message, HashMap<String, Object> placeholders) {
         Set<PluginPlaceholder> usedPlaceholders = getUsedPlaceholders(message, placeholders);
 
@@ -105,6 +122,9 @@ public class Messenger {
         return text;
     }
 
+    /**
+     * Finds what placeholders are used in provided text, out of provided hash map.
+     */
     private static Set<PluginPlaceholder> getUsedPlaceholders(String text, HashMap<String, Object> placeholders) {
         Set<PluginPlaceholder> usedPlaceholders = new HashSet<>();
 
