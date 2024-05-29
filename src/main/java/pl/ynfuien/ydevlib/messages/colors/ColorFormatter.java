@@ -92,6 +92,7 @@ public class ColorFormatter {
     }
 
     public static String parsePAPI(CommandSender sender, String message) {
+        if (message == null) return null;
         if (message.isBlank()) return message;
         if (!PAPI_ENABLED) return message;
         if (!(sender instanceof Player p)) return message;
