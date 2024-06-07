@@ -12,25 +12,25 @@ import static org.bukkit.Bukkit.getServer;
 
 public class ConfigHandler {
     private final Plugin plugin;
-    private final HashMap<ConfigName, ConfigObject> configs = new HashMap<>();
+    private final HashMap<ConfigObject.Name, ConfigObject> configs = new HashMap<>();
 
     public ConfigHandler(Plugin plugin) {
         this.plugin = plugin;
     }
 
-    public boolean load(ConfigName name) {
+    public boolean load(ConfigObject.Name name) {
         return load(name, true);
     }
 
-    public boolean load(ConfigName name, boolean updating) {
+    public boolean load(ConfigObject.Name name, boolean updating) {
         return load(name, updating, false);
     }
 
-    public boolean load(ConfigName name, boolean updating, boolean useDefault) {
+    public boolean load(ConfigObject.Name name, boolean updating, boolean useDefault) {
         return load(name, updating, useDefault, new ArrayList<>());
     }
 
-    public boolean load(ConfigName name, boolean updating, boolean useDefault, List<String> ignoredKeys) {
+    public boolean load(ConfigObject.Name name, boolean updating, boolean useDefault, List<String> ignoredKeys) {
         ConfigObject config = new ConfigObject(plugin, name);
         config.setUpdating(updating);
         config.setUseDefault(useDefault);
@@ -62,12 +62,12 @@ public class ConfigHandler {
         return noProblems;
     }
 
-    public ConfigObject getConfigObject(ConfigName name) {
+    public ConfigObject getConfigObject(ConfigObject.Name name) {
         return configs.get(name);
     }
 
 
-    public FileConfiguration getConfig(ConfigName name) {
+    public FileConfiguration getConfig(ConfigObject.Name name) {
         ConfigObject config = configs.get(name);
         if (config == null) return null;
 

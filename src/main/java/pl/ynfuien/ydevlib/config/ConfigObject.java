@@ -22,7 +22,7 @@ import java.util.List;
 
 public class ConfigObject {
     private final Plugin plugin;
-    private final ConfigName name;
+    private final Name name;
     private final String fileName;
     private final File file;
     private FileConfiguration config = new YamlConfiguration();
@@ -31,7 +31,7 @@ public class ConfigObject {
     private boolean useDefault = false;
     private List<String> ignoredKeys = new ArrayList<>();
 
-    public ConfigObject(Plugin plugin, ConfigName name) {
+    public ConfigObject(Plugin plugin, Name name) {
         this.plugin = plugin;
         this.name = name;
         fileName = name.getFileName();
@@ -190,7 +190,7 @@ public class ConfigObject {
 
 
     // Getters
-    public ConfigName getName() {
+    public ConfigObject.Name getName() {
         return name;
     }
     public File getFile() {
@@ -222,5 +222,9 @@ public class ConfigObject {
     }
     public void setIgnoredKeys(@NotNull List<String> ignoredKeys) {
         this.ignoredKeys = ignoredKeys;
+    }
+
+    public interface Name {
+        String getFileName();
     }
 }
