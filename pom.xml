@@ -6,51 +6,13 @@
 
     <groupId>pl.ynfuien</groupId>
     <artifactId>YDevLib</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-<!--    <build>-->
-<!--        <plugins>-->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-shade-plugin</artifactId>-->
-<!--                <version>3.5.1</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>package</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>shade</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <filters>-->
-<!--                                <filter>-->
-<!--                                    <artifact>*.*</artifact>-->
-<!--                                    <excludes>-->
-<!--                                        <exclude>module-info.class</exclude>-->
-<!--                                        <exclude>META-INF/*.MF</exclude>-->
-<!--                                    </excludes>-->
-<!--                                </filter>-->
-<!--                            </filters>-->
-
-<!--                            <createDependencyReducedPom>false</createDependencyReducedPom>-->
-<!--                            <relocations>-->
-<!--                                &lt;!&ndash;    BStats    &ndash;&gt;-->
-<!--                                <relocation>-->
-<!--                                    <pattern>org.bstats</pattern>-->
-<!--                                    <shadedPattern>pl.ynfuien.ydevlib.libs.bstats</shadedPattern>-->
-<!--                                </relocation>-->
-<!--                            </relocations>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
-<!--        </plugins>-->
-<!--    </build>-->
 
     <repositories>
         <repository>
@@ -80,12 +42,5 @@
             <version>2.11.5</version>
             <scope>provided</scope>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>org.bstats</groupId>-->
-<!--            <artifactId>bstats-bukkit</artifactId>-->
-<!--            <version>3.0.2</version>-->
-<!--            <scope>compile</scope>-->
-<!--        </dependency>-->
     </dependencies>
 </project>
