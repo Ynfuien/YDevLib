@@ -42,12 +42,17 @@ public class CommonPlaceholders {
     }
 
     public static void setDuration(HashMap<String, Object> placeholders, long time, String prefix) {
+        Duration duration = Duration.ofMillis(time);
+        setDuration(placeholders, duration, prefix);
+    }
+
+    public static void setDuration(HashMap<String, Object> placeholders, Duration duration, String prefix) {
         String pfx = prefix == null ? "" : prefix + "-";
 
-        Duration duration = Duration.ofMillis(time);
         placeholders.put(pfx+"days", duration.toDaysPart());
         placeholders.put(pfx+"hours", duration.toHoursPart());
         placeholders.put(pfx+"minutes", duration.toMinutesPart());
         placeholders.put(pfx+"seconds", duration.toSecondsPart());
+        placeholders.put(pfx+"milliseconds", duration.toMillisPart());
     }
 }
