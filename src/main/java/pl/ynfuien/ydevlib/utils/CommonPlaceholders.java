@@ -1,7 +1,9 @@
 package pl.ynfuien.ydevlib.utils;
 
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -54,5 +56,17 @@ public class CommonPlaceholders {
         placeholders.put(pfx+"minutes", duration.toMinutesPart());
         placeholders.put(pfx+"seconds", duration.toSecondsPart());
         placeholders.put(pfx+"milliseconds", duration.toMillisPart());
+    }
+
+    public static void setPlayer(HashMap<String, Object> placeholders, OfflinePlayer player) {
+        setPlayer(placeholders, player, null);
+    }
+    public static void setPlayer(HashMap<String, Object> placeholders, OfflinePlayer player, String prefix) {
+        String pfx = prefix == null ? "" : prefix + "-";
+
+        placeholders.put(pfx+"player-uuid", player.getUniqueId());
+        placeholders.put(pfx+"player-username", player.getName());
+        placeholders.put(pfx+"player-name", player.getName());
+        if (player.isOnline()) placeholders.put(pfx+"player-display-name", ColorFormatter.SERIALIZER.serialize(player.getPlayer().displayName()));
     }
 }
