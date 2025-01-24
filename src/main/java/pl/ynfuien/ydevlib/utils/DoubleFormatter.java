@@ -5,6 +5,8 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 public class DoubleFormatter {
+    public static final DoubleFormatter DEFAULT = new DoubleFormatter();
+
     private boolean cutDecimalZeros;
     private int exactDecimalPlaces;
     private int maxDecimalPlaces = -1;
