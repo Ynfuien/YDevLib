@@ -20,9 +20,11 @@ import java.util.*;
 public class Item {
     protected Material material;
     protected Short amount = 1;
+
     protected Component displayName = null;
-    protected boolean unbreakable = false;
     protected List<Component> lore = new ArrayList<>();
+
+    protected boolean unbreakable = false;
     protected Set<ItemFlag> itemFlags = new HashSet<>();
     protected Color potionColor = null;
     protected HashMap<Enchantment, Integer> enchantments = new HashMap<>();
@@ -66,11 +68,6 @@ public class Item {
             displayName = serializer.deserialize(text);
         }
 
-        // Unbreakable
-        if (config.contains("unbreakable")) {
-            unbreakable = config.getBoolean("unbreakable");
-        }
-
         // Lore
         if (config.contains("lore")) {
             if (!config.isList("lore")) {
@@ -82,6 +79,11 @@ public class Item {
             for (String line : lines) {
                 lore.add(serializer.deserialize(line));
             }
+        }
+
+        // Unbreakable
+        if (config.contains("unbreakable")) {
+            unbreakable = config.getBoolean("unbreakable");
         }
 
         // Item flags

@@ -1,11 +1,13 @@
 package pl.ynfuien.ydevlib.guis;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 import pl.ynfuien.ydevlib.messages.YLogger;
+import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
 
 import java.text.MessageFormat;
 import java.util.Arrays;
@@ -16,7 +18,7 @@ public class GUIPanel implements InventoryHolder {
     protected Inventory inventory;
 
     protected final String name;
-    protected String title = null;
+    protected Component title = null;
     protected Short rows;
 
     protected GUISound openSound = null;
@@ -36,7 +38,7 @@ public class GUIPanel implements InventoryHolder {
         }
 
         // Title
-        if (config.contains("title")) title = config.getString("title");
+        if (config.contains("title")) title = ColorFormatter.SERIALIZER.deserialize(config.getString("title"));
 
         // Rows
         try {
@@ -101,7 +103,7 @@ public class GUIPanel implements InventoryHolder {
                 continue;
             }
 
-            if (slot > (rows * 9) - 1) {
+            if (slot > maxSlotIndex) {
                 log(String.format("Slot number '%d' is higher than %d!", slot, maxSlotIndex));
                 continue;
             }
@@ -127,7 +129,7 @@ public class GUIPanel implements InventoryHolder {
         return name;
     }
 
-    public String getTitle() {
+    public Component getTitle() {
         return title;
     }
 
