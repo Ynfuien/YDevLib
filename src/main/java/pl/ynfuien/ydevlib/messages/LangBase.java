@@ -38,7 +38,9 @@ public abstract class LangBase {
         if (langConfig.isList(path)) messages = langConfig.getStringList(path);
         else messages = List.of(langConfig.getString(path));
 
+        if (placeholders == null) placeholders = new HashMap<>();
         placeholders.put("prefix", get("prefix"));
+
         for (String msg : messages) {
             // Skip if message is empty
             if (msg.isEmpty()) continue;
