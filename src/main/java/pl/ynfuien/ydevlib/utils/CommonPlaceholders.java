@@ -3,6 +3,7 @@ package pl.ynfuien.ydevlib.utils;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
 
 import java.sql.Timestamp;
@@ -68,5 +69,16 @@ public class CommonPlaceholders {
         placeholders.put(pfx+"player-username", player.getName());
         placeholders.put(pfx+"player-name", player.getName());
         if (player.isOnline()) placeholders.put(pfx+"player-display-name", ColorFormatter.SERIALIZER.serialize(player.getPlayer().displayName()));
+    }
+
+    public static void setEntity(HashMap<String, Object> placeholders, Entity entity) {
+        setEntity(placeholders, entity, null);
+    }
+    public static void setEntity(HashMap<String, Object> placeholders, Entity entity, String prefix) {
+        String pfx = prefix == null ? "" : prefix + "-";
+
+        placeholders.put(pfx+"uuid", entity.getUniqueId());
+        placeholders.put(pfx+"name", ColorFormatter.SERIALIZER.serialize(entity.name()));
+        placeholders.put(pfx+"type", entity.getType().name());
     }
 }
