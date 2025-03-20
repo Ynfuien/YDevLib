@@ -131,6 +131,25 @@ public class ColorFormatter {
         return serializer.deserialize(message, TagResolver.resolver(permittedResolvers));
     }
 
+    /**
+     * Sets decoration of component's children to TextDecoration.State.FALSE if it's current state is State.NOT_SET and if the component has any color.
+     * Mainly used for setting an item lore which is italic by default.
+     * @param component Component to modify
+     * @param decoration A decoration to negate
+     * @return Modified component
+     */
+    public static Component negateUnsetDecoration(Component component, TextDecoration decoration) {
+        List<Component> children = new ArrayList<>(component.children());
+        children.replaceAll(component1 -> negateUnsetDecoration(component1, decoration));
+
+        TextDecoration.State state = component.decoration(decoration);
+        if (state.equals(TextDecoration.State.NOT_SET) && component.color() != null) {
+            component = component.decoration(decoration, TextDecoration.State.FALSE);
+        }
+
+        return component.children(children);
+    }
+
     public enum YTagResolver {
         COLOR_HEX(HexColorTagResolver.get()),
         NBT(StandardTags.nbt()),
