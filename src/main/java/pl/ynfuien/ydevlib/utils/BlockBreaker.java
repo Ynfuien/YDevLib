@@ -17,7 +17,7 @@ public class BlockBreaker {
         World world = location.getWorld();
 
         world.playEffect(location, Effect.STEP_SOUND, blockData);
-        world.spawnParticle(Particle.BLOCK_CRACK, location, 1, blockData);
+        world.spawnParticle(Particle.BLOCK, location, 1, blockData);
 
         block.setType(Material.AIR);
     }
