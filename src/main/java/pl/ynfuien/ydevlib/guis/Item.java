@@ -1,6 +1,7 @@
 package pl.ynfuien.ydevlib.guis;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -8,10 +9,12 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import pl.ynfuien.ydevlib.messages.Messenger;
 import pl.ynfuien.ydevlib.messages.YLogger;
 import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
 
@@ -21,21 +24,29 @@ public class Item {
     protected Material material;
     protected Short amount = 1;
 
-    protected Component displayName = null;
-    protected List<Component> lore = new ArrayList<>();
+    protected String displayName = null;
+    protected List<String> lore = new ArrayList<>();
 
     protected boolean unbreakable = false;
     protected Set<ItemFlag> itemFlags = new HashSet<>();
     protected Color potionColor = null;
     protected HashMap<Enchantment, Integer> enchantments = new HashMap<>();
 
-    public boolean load(ConfigurationSection config) {
-        finalItem = null;
+    private ItemStack finalItem = null;
+    private ItemStack templateItem = null;
+    private boolean needsComponentParsing = false;
 
-        Map<String, Object> values = config.getValues(true);
-        for (Map.Entry<String, Object> entry : values.entrySet()) {
-            YLogger.info(String.format("Entry: '%s' - '%s'", entry.getKey(), entry.getValue()));
-        }
+    /**
+     * Loads an item from the config section, that is expected to at least have a 'material' field.
+     * @return True if item was successfully loaded, false otherwise
+     */
+    public boolean load(ConfigurationSection config) {
+        templateItem = null;
+
+//        Map<String, Object> values = config.getValues(true);
+//        for (Map.Entry<String, Object> entry : values.entrySet()) {
+//            YLogger.info(String.format("Entry: '%s' - '%s'", entry.getKey(), entry.getValue()));
+//        }
 
         // Material
         if (!config.contains("material")) {
@@ -44,7 +55,7 @@ public class Item {
         }
 
         material = Material.matchMaterial(config.getString("material"));
-        if (material == null) {
+        if (material == null || !material.isItem()) {
             log("Value for the 'material' key is incorrect!");
             return false;
         }
@@ -59,14 +70,8 @@ public class Item {
             }
         }
 
-
-        MiniMessage serializer = ColorFormatter.SERIALIZER;
-
         // Display name
-        if (config.contains("display-name")) {
-            String text = config.getString("display-name");
-            displayName = serializer.deserialize(text);
-        }
+        if (config.contains("display-name")) displayName = config.getString("display-name");
 
         // Lore
         if (config.contains("lore")) {
@@ -75,10 +80,7 @@ public class Item {
                 return false;
             }
 
-            List<String> lines = config.getStringList("lore");
-            for (String line : lines) {
-                lore.add(serializer.deserialize(line));
-            }
+            lore = config.getStringList("lore");
         }
 
         // Unbreakable
@@ -138,9 +140,16 @@ public class Item {
             }
         }
 
+        setupItemStacks();
         return true;
     }
 
+    /**
+     * Loads an item that's under provided key in provided config section.
+     * If a value under a key is a string, then it will be used for the item material.
+     * Otherwise, a section under that key will be passed to the {@link #load(ConfigurationSection) load(ConfigurationSection)}.
+     * @return Loaded item or null if there was an error
+     */
     public static Item load(ConfigurationSection config, String key) {
         Item item = new Item();
 
@@ -149,12 +158,13 @@ public class Item {
             String material = config.getString(key);
             Material mat = Material.matchMaterial(material);
 
-            if (mat == null) {
+            if (mat == null || !mat.isItem()) {
                 item.log(String.format("Material '%s' is incorrect!", material));
                 return null;
             }
 
             item.material = mat;
+            item.setupItemStacks();
             return item;
         }
 
@@ -165,15 +175,19 @@ public class Item {
         YLogger.warn(String.format("[Item] %s", message));
     }
 
-    private ItemStack finalItem = null;
-    public ItemStack getItemStack() {
-        if (finalItem != null) return finalItem;
+    private void setupItemStacks() {
+        if (material.isAir()) {
+            templateItem = ItemStack.empty();
+            finalItem = templateItem;
+            return;
+        }
 
-        ItemStack item = new ItemStack(material, amount);
-        ItemMeta meta = item.getItemMeta();
+        MiniMessage serializer = ColorFormatter.SERIALIZER;
 
-        meta.displayName(displayName);
-        meta.lore(lore);
+        // Template item, for per player usage
+        templateItem = new ItemStack(material, amount);
+        ItemMeta meta = templateItem.getItemMeta();
+
         meta.setUnbreakable(unbreakable);
         for (ItemFlag flag : itemFlags) meta.addItemFlags(flag);
 
@@ -186,8 +200,57 @@ public class Item {
             potionMeta.setColor(potionColor);
         }
 
+        templateItem.setItemMeta(meta);
+
+        // Final item, for general usage
+        finalItem = templateItem.clone();
+        meta = finalItem.getItemMeta();
+
+        if (this.displayName != null) {
+            needsComponentParsing = true;
+            Component displayName = serializer.deserialize(this.displayName);
+            meta.displayName(ColorFormatter.negateUnsetDecoration(displayName, TextDecoration.ITALIC));
+        }
+
+        if (!this.lore.isEmpty()) {
+            needsComponentParsing = true;
+            List<Component> lore = new ArrayList<>();
+            for (String line : this.lore) {
+                Component parsed = serializer.deserialize(line);
+                lore.add(ColorFormatter.negateUnsetDecoration(parsed, TextDecoration.ITALIC));
+            }
+            meta.lore(lore);
+        }
+
+        finalItem.setItemMeta(meta);
+    }
+
+    public ItemStack getItemStack() {
+        return finalItem;
+    }
+
+    public ItemStack getItemStack(Player player) {
+        if (!needsComponentParsing) return templateItem;
+
+        ItemStack item = templateItem.clone();
+        ItemMeta meta = item.getItemMeta();
+
+        if (this.displayName != null) {
+            Component displayName = Messenger.parseMessage(player, this.displayName, null);
+            meta.displayName(ColorFormatter.negateUnsetDecoration(displayName, TextDecoration.ITALIC));
+        }
+
+        if (!this.lore.isEmpty()) {
+            List<Component> lore = new ArrayList<>();
+            for (String line : this.lore) {
+                Component parsed = Messenger.parseMessage(player, line, null);
+                lore.add(ColorFormatter.negateUnsetDecoration(parsed, TextDecoration.ITALIC));
+            }
+            meta.lore(lore);
+        }
+
+
         item.setItemMeta(meta);
-        finalItem = item;
         return item;
     }
 }

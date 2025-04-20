@@ -1,31 +1,35 @@
 package pl.ynfuien.ydevlib.guis;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.Nullable;
+import pl.ynfuien.ydevlib.guis.listeners.InventoryClickListener;
+import pl.ynfuien.ydevlib.guis.listeners.InventoryDragListener;
 import pl.ynfuien.ydevlib.messages.YLogger;
-import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
 
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.UUID;
 
-public class GUIPanel implements InventoryHolder {
-    protected Inventory inventory;
-
+public class GUIPanel {
     protected final String name;
-    protected Component title = null;
+    @Nullable
+    protected String title = null;
     protected Short rows;
 
+    @Nullable
     protected GUISound openSound = null;
+    @Nullable
     protected GUISound closeSound = null;
 
-    protected Item emptySlotItem = null;
-    protected HashMap<Short, Item> slots;
+    protected HashMap<String, Item> items = new HashMap<>();
+    protected HashMap<Short, Item> slots = new HashMap<>();
+
+    protected HashMap<UUID, GUIPanelHolder> inventories = new HashMap<>();
 
     public GUIPanel(String name) {
         this.name = name;
@@ -38,7 +42,7 @@ public class GUIPanel implements InventoryHolder {
         }
 
         // Title
-        if (config.contains("title")) title = ColorFormatter.SERIALIZER.deserialize(config.getString("title"));
+        if (config.contains("title")) title = config.getString("title");
 
         // Rows
         try {
@@ -58,8 +62,6 @@ public class GUIPanel implements InventoryHolder {
             return false;
         }
 
-        inventory = Bukkit.createInventory(this, rows, title);
-
         // Sounds
         for (String soundName : Arrays.asList("open-sound", "close-sound")) {
             if (config.contains(soundName)) {
@@ -73,16 +75,25 @@ public class GUIPanel implements InventoryHolder {
                     loaded = closeSound.load(config.getConfigurationSection(soundName));
                 }
 
-                if (!loaded) log(MessageFormat.format("%s couldn't be loaded!", soundName));
+
+                if (!loaded) log(String.format("%s couldn't be loaded!", soundName));
             }
         }
 
-        // Empty slot item
-        if (config.contains("items.empty-slot")) {
-            emptySlotItem = Item.load(config.getConfigurationSection("items"), "empty-slot");
+        // Items
+        items.clear();
+        if (config.contains("items")) {
+            ConfigurationSection itemSection = config.getConfigurationSection("items");
+            for (String itemName : itemSection.getKeys(false)) {
+                Item item = Item.load(itemSection, itemName);
+                if (item == null) continue;
+
+                items.put(itemName.toLowerCase(), item);
+            }
         }
 
         // Slots
+        slots.clear();
         ConfigurationSection slotsSection = config.getConfigurationSection("slots");
         if (slotsSection == null) return true;
 
@@ -122,14 +133,14 @@ public class GUIPanel implements InventoryHolder {
 
 
     protected void log(String message) {
-        YLogger.warn(MessageFormat.format("[GUIPanel-{0}] {1}", name, message));
+        YLogger.warn(String.format("[GUIPanel-%s] %s", name, message));
     }
 
     public String getName() {
         return name;
     }
 
-    public Component getTitle() {
+    public @Nullable String getTitle() {
         return title;
     }
 
@@ -137,24 +148,51 @@ public class GUIPanel implements InventoryHolder {
         return rows;
     }
 
-    public GUISound getOpenSound() {
+    public @Nullable GUISound getOpenSound() {
         return openSound;
     }
 
-    public GUISound getCloseSound() {
+    public @Nullable GUISound getCloseSound() {
         return closeSound;
     }
 
-    public Item getEmptySlotItem() {
-        return emptySlotItem;
+    public @Nullable Item getEmptySlotItem() {
+        return items.get("empty-slot");
     }
 
     public HashMap<Short, Item> getSlots() {
         return slots;
     }
 
-    @Override
-    public @NotNull Inventory getInventory() {
-        return inventory;
+    public void update(Player player) {
+        UUID uuid = player.getUniqueId();
+
+        GUIPanelHolder panelHolder = inventories.get(uuid);
+        if (panelHolder == null) return;
+
+        panelHolder.update();
+    }
+
+    public void open(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (!inventories.containsKey(uuid)) inventories.put(uuid, new GUIPanelHolder(this, player));
+
+        GUIPanelHolder panelHolder = inventories.get(uuid);
+        panelHolder.open();
+    }
+
+    private static boolean registered = false;
+    public static void registerListeners(Plugin plugin) {
+        if (registered) return;
+        registered = true;
+
+        Listener[] listeners = new Listener[] {
+                new InventoryClickListener(),
+                new InventoryDragListener(),
+        };
+
+        for (Listener listener : listeners) {
+            Bukkit.getPluginManager().registerEvents(listener, plugin);
+        }
     }
 }
