@@ -16,7 +16,7 @@ public class GUIPanelHolder implements InventoryHolder {
     private final Player player;
     private final Inventory inventory;
 
-    public GUIPanelHolder(GUIPanel guiPanel, Player player) {
+    protected GUIPanelHolder(GUIPanel guiPanel, Player player) {
         this.guiPanel = guiPanel;
         this.player = player;
 
@@ -59,24 +59,7 @@ public class GUIPanelHolder implements InventoryHolder {
             inventory.setItem(i, item.getItemStack(player));
         }
 
-//        HashMap<Short, Item> slots = guiPanel.getSlots();
-//        for (Short slotNumber : slots.keySet()) {
-//            Item item = slots.get(slotNumber);
-//
-//            inventory.setItem(slotNumber, item.getItemStack(player));
-//        }
-//
-//        Item emptySlotItem = guiPanel.getEmptySlotItem();
-//        if (emptySlotItem != null) {
-//            ItemStack emptySlotItemStack = emptySlotItem.getItemStack(player);
-//
-//            for (int i = 0; i < inventory.getSize(); i++) {
-//                ItemStack item = inventory.getItem(i);
-//                if (item != null) continue;
-//
-//                inventory.setItem(i, emptySlotItemStack);
-//            }
-//        }
+        guiPanel.updateSpecialItems(player, inventory);
     }
 
     public void open() {

@@ -1,5 +1,6 @@
 package pl.ynfuien.ydevlib.guis;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -14,6 +15,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import pl.ynfuien.ydevlib.messages.Messenger;
 import pl.ynfuien.ydevlib.messages.YLogger;
 import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
@@ -31,6 +33,7 @@ public class Item {
     protected Set<ItemFlag> itemFlags = new HashSet<>();
     protected Color potionColor = null;
     protected HashMap<Enchantment, Integer> enchantments = new HashMap<>();
+    protected String skullOwner = null;
 
     private ItemStack finalItem = null;
     private ItemStack templateItem = null;
@@ -43,11 +46,6 @@ public class Item {
     public boolean load(ConfigurationSection config) {
         templateItem = null;
 
-//        Map<String, Object> values = config.getValues(true);
-//        for (Map.Entry<String, Object> entry : values.entrySet()) {
-//            YLogger.info(String.format("Entry: '%s' - '%s'", entry.getKey(), entry.getValue()));
-//        }
-
         // Material
         if (!config.contains("material")) {
             log("Key 'material' is missing!");
@@ -56,7 +54,7 @@ public class Item {
 
         material = Material.matchMaterial(config.getString("material"));
         if (material == null || !material.isItem()) {
-            log("Value for the 'material' key is incorrect!");
+            log(String.format("Material '%s' is incorrect!", config.getString("material")));
             return false;
         }
 
@@ -138,6 +136,12 @@ public class Item {
                 int value = section.getInt(enchant);
                 enchantments.put(enchantment, value);
             }
+        }
+
+        // Skull owner
+        if (config.contains("skull-owner")) {
+            skullOwner = config.getString("skull-owner");
+            if (!material.equals(Material.PLAYER_HEAD)) log("Skull owner field is set but item material isn't a player head!");
         }
 
         setupItemStacks();
@@ -222,6 +226,8 @@ public class Item {
             meta.lore(lore);
         }
 
+        if (material.equals(Material.PLAYER_HEAD) && skullOwner != null) needsComponentParsing = true;
+
         finalItem.setItemMeta(meta);
     }
 
@@ -230,23 +236,46 @@ public class Item {
     }
 
     public ItemStack getItemStack(Player player) {
+        return getItemStack(player, new HashMap<>());
+    }
+
+    public ItemStack getItemStack(Player player, HashMap<String, Object> placeholders) {
         if (!needsComponentParsing) return templateItem;
+
+        if (placeholders != null) {
+            placeholders.put("player-name", player.getName());
+            placeholders.put("player-uuid", player.getUniqueId().toString());
+        }
 
         ItemStack item = templateItem.clone();
         ItemMeta meta = item.getItemMeta();
 
         if (this.displayName != null) {
-            Component displayName = Messenger.parseMessage(player, this.displayName, null);
+            Component displayName = Messenger.parseMessage(player, this.displayName, placeholders);
             meta.displayName(ColorFormatter.negateUnsetDecoration(displayName, TextDecoration.ITALIC));
         }
 
         if (!this.lore.isEmpty()) {
             List<Component> lore = new ArrayList<>();
             for (String line : this.lore) {
-                Component parsed = Messenger.parseMessage(player, line, null);
+                Component parsed = Messenger.parseMessage(player, line, placeholders);
                 lore.add(ColorFormatter.negateUnsetDecoration(parsed, TextDecoration.ITALIC));
             }
             meta.lore(lore);
+        }
+
+        if (material.equals(Material.PLAYER_HEAD) && skullOwner != null) {
+            String owner = Messenger.parsePluginPlaceholders(skullOwner, placeholders);
+            owner = ColorFormatter.parsePAPI(player, owner);
+
+            try {
+                PlayerProfile profile = Bukkit.createProfile(owner);
+                SkullMeta skullMeta = (SkullMeta) meta;
+                skullMeta.setPlayerProfile(profile);
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+                log(String.format("Provided skull-owner is incorrect! ('%s')", owner));
+            }
         }
 
 
