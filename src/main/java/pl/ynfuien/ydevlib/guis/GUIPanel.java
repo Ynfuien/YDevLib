@@ -1,10 +1,13 @@
 package pl.ynfuien.ydevlib.guis;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 import pl.ynfuien.ydevlib.guis.listeners.InventoryClickListener;
@@ -17,12 +20,14 @@ import pl.ynfuien.ydevlib.utils.YamlHelper;
 import java.util.*;
 
 public abstract class GUIPanel {
-    private final static List<GUIPanel> guiPanels = new ArrayList<>();
+    private final static HashMap<String, GUIPanel> guiPanels = new HashMap<>();
 
+    protected final Plugin plugin;
     protected final String name;
     @Nullable
     protected String title = null;
     protected Short rows;
+    protected int refreshRate = -1;
 
     @Nullable
     protected GUISound openSound = null;
@@ -33,14 +38,18 @@ public abstract class GUIPanel {
     protected HashMap<Short, Item> slots = new HashMap<>();
 
     protected HashMap<UUID, GUIPanelHolder> inventories = new HashMap<>();
+    protected ScheduledTask refreshTask = null;
 
-    protected GUIPanel(String name) {
+    protected GUIPanel(Plugin plugin, String name) {
+        this.plugin = plugin;
         this.name = name;
 
-        guiPanels.add(this);
+        guiPanels.put(name, this);
     }
 
     public boolean load(ConfigurationSection config) {
+        if (refreshTask != null) refreshTask.cancel();
+
         if (!config.contains("rows")) {
             log("Missing key 'rows'");
             return false;
@@ -66,6 +75,10 @@ public abstract class GUIPanel {
             log("Rows number can't be lower than 1!");
             return false;
         }
+
+        // Refresh rate
+        if (config.contains("refresh-rate")) refreshRate = config.getInt("refresh-rate");
+        if (refreshRate < 1) refreshRate = -1;
 
         // Sounds
         for (String soundName : Arrays.asList("open-sound", "close-sound")) {
@@ -97,7 +110,6 @@ public abstract class GUIPanel {
                 }
 
                 items.put(itemName.toLowerCase(), item);
-                YLogger.debug(String.format("Put item '%s'", itemName.toLowerCase()));
             }
         }
 
@@ -140,6 +152,12 @@ public abstract class GUIPanel {
             for (int slot : slotSet) slots.put((short) slot, item);
         }
 
+        if (refreshRate != -1) {
+            refreshTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, (task) -> {
+                update();
+            }, 1, refreshRate);
+        }
+
         return true;
     }
 
@@ -165,7 +183,14 @@ public abstract class GUIPanel {
      * Updates the GUI for all the players.
      */
     public void update() {
-        for (GUIPanelHolder panelHolder : inventories.values()) panelHolder.update();
+        for (GUIPanelHolder panelHolder : inventories.values()) {
+            InventoryHolder holder = panelHolder.getPlayer().getOpenInventory().getTopInventory().getHolder();
+            if (holder == null) continue;
+
+            if (!holder.equals(panelHolder)) continue;
+
+            panelHolder.update();
+        }
     }
 
     /**
@@ -189,6 +214,9 @@ public abstract class GUIPanel {
     }
 
     protected abstract void updateSpecialItems(Player player, Inventory inventory);
+
+    public abstract void handleClickEvent(InventoryClickEvent event);
+
 
     protected void log(String message) {
         YLogger.warn(String.format("[GUIPanel-%s] %s", name, message));
@@ -240,6 +268,14 @@ public abstract class GUIPanel {
     }
 
     public static void removePanelHolders(Player player) {
-        for (GUIPanel panel : guiPanels) panel.inventories.remove(player.getUniqueId());
+        for (GUIPanel panel : guiPanels.values()) panel.inventories.remove(player.getUniqueId());
+    }
+
+    public static boolean openPanel(String panelName, Player player) {
+        GUIPanel panel = guiPanels.get(panelName);
+        if (panel == null) return false;
+
+        panel.open(player);
+        return true;
     }
 }

@@ -1,18 +1,20 @@
 package pl.ynfuien.ydevlib.guis;
 
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import pl.ynfuien.ydevlib.messages.YLogger;
-
-import java.text.MessageFormat;
 
 public class GUISound {
     // Like "open-sound", "close-sound"
     protected String name;
     protected Sound sound;
-    protected Float volume;
-    protected Float pitch;
+    protected SoundCategory soundCategory = SoundCategory.MASTER;
+    protected Float volume = 1f;
+    protected Float pitch = 1f;
 
     public GUISound(String name) {
         this.name = name;
@@ -27,11 +29,21 @@ public class GUISound {
         // Sound
         try {
             String soundString = configSection.getString("sound");
-            soundString = soundString.replace('.', '_').toUpperCase();
-            sound = Sound.valueOf(soundString);
+//            soundString = soundString.replace('.', '_').toUpperCase();
+            sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundString));
         } catch (IllegalArgumentException e) {
             log("Provided sound is incorrect!");
             return false;
+        }
+
+        // Category
+        if (configSection.contains("category")) {
+            try {
+                soundCategory = SoundCategory.valueOf(configSection.getString("category").toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log("Provided sound category is incorrect!");
+                return false;
+            }
         }
 
         // Volume
@@ -43,10 +55,6 @@ public class GUISound {
                 return false;
             }
         }
-        else {
-            volume = 1f;
-        }
-
 
         // Pitch
         if (configSection.contains("pitch")) {
@@ -57,15 +65,12 @@ public class GUISound {
                 return false;
             }
         }
-        else {
-            pitch = 1f;
-        }
 
         return true;
     }
 
     protected void log(String message) {
-        YLogger.warn(MessageFormat.format("[Sound-{0}] {1}", name, message));
+        YLogger.warn(String.format("[Sound-%s] %s", name, message));
     }
 
     public Sound sound() {
@@ -81,6 +86,6 @@ public class GUISound {
     }
 
     public void playSound(Player p) {
-        p.playSound(p.getLocation(), sound, volume, pitch);
+        p.playSound(p.getLocation(), sound, soundCategory, volume, pitch);
     }
 }

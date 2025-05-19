@@ -8,6 +8,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import pl.ynfuien.ydevlib.guis.GUIPanelHolder;
+import pl.ynfuien.ydevlib.guis.Item;
 
 public class InventoryClickListener implements Listener {
 
@@ -24,6 +25,9 @@ public class InventoryClickListener implements Listener {
 
         if (topInventory.equals(clickedInventory)) {
             event.setCancelled(true);
+
+            performItemActions(panelHolder, event);
+            panelHolder.getGuiPanel().handleClickEvent(event);
             return;
         }
 
@@ -31,5 +35,12 @@ public class InventoryClickListener implements Listener {
         if (action.equals(InventoryAction.MOVE_TO_OTHER_INVENTORY) || action.equals(InventoryAction.COLLECT_TO_CURSOR)) {
             event.setCancelled(true);
         }
+    }
+
+    private void performItemActions(GUIPanelHolder holder, InventoryClickEvent event) {
+        Item item = holder.getGuiPanel().getSlots().get((short) event.getSlot());
+        if (item == null) return;
+
+        item.performActions(event);
     }
 }

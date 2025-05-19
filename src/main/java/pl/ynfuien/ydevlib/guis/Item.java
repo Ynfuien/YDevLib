@@ -1,21 +1,24 @@
 package pl.ynfuien.ydevlib.guis;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.jetbrains.annotations.NotNull;
 import pl.ynfuien.ydevlib.messages.Messenger;
 import pl.ynfuien.ydevlib.messages.YLogger;
 import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
@@ -38,6 +41,13 @@ public class Item {
     private ItemStack finalItem = null;
     private ItemStack templateItem = null;
     private boolean needsComponentParsing = false;
+
+    private final List<ItemAction> actions = new ArrayList<>();
+    private String withPermission = null;
+    private Item withPermissionItem = null;
+
+    private final static Registry<@NotNull Enchantment> enchantmentRegistry = RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT);
+
 
     /**
      * Loads an item from the config section, that is expected to at least have a 'material' field.
@@ -127,7 +137,7 @@ public class Item {
             ConfigurationSection section = config.getConfigurationSection("enchants");
             Set<String> enchants = section.getKeys(false);
             for (String enchant : enchants) {
-                Enchantment enchantment = Bukkit.getRegistry(Enchantment.class).get(NamespacedKey.minecraft(enchant.toLowerCase()));
+                Enchantment enchantment = enchantmentRegistry.get(NamespacedKey.minecraft(enchant.toLowerCase()));
                 if (enchantment == null) {
                     log(String.format("Enchant '%s' is incorrect!", enchant));
                     continue;
@@ -144,7 +154,52 @@ public class Item {
             if (!material.equals(Material.PLAYER_HEAD)) log("Skull owner field is set but item material isn't a player head!");
         }
 
-        setupItemStacks();
+        // Actions
+        if (config.isConfigurationSection("actions")) {
+            ConfigurationSection section = config.getConfigurationSection("actions");
+            Set<String> keys = section.getKeys(false);
+
+            for (String key : keys) {
+                if (!section.isConfigurationSection(key)) continue;
+
+                ConfigurationSection actionSection = section.getConfigurationSection(key);
+                ItemAction action = new ItemAction(this);
+
+                if (!action.load(actionSection)) {
+                    log(String.format("Couldn't load '%s' action!", key));
+                    continue;
+                }
+
+                actions.add(action);
+            }
+        }
+
+        // Item with permission
+        if (config.isConfigurationSection("with-permission")) {
+            ConfigurationSection section = config.getConfigurationSection("with-permission");
+            withPermission = section.getString("permission");
+            if (withPermission == null) {
+                log("'with-permission' section has to have 'permission' field!");
+                return false;
+            }
+
+            ConfigurationSection itemSection = section.getConfigurationSection("item");
+            if (itemSection == null) {
+                log("'with-permission' section has to have 'item' section!");
+                return false;
+            }
+
+            config.set("with-permission", null);
+            for (String key : itemSection.getKeys(false)) config.set(key, itemSection.get(key));
+
+            withPermissionItem = new Item();
+            if (!withPermissionItem.load(config)) {
+                log("With-permission item couldn't be loaded!");
+                return false;
+            }
+        }
+
+        setupItemStacks(config);
         return true;
     }
 
@@ -168,7 +223,7 @@ public class Item {
             }
 
             item.material = mat;
-            item.setupItemStacks();
+            item.setupItemStacks(null);
             return item;
         }
 
@@ -179,7 +234,7 @@ public class Item {
         YLogger.warn(String.format("[Item] %s", message));
     }
 
-    private void setupItemStacks() {
+    private void setupItemStacks(ConfigurationSection config) {
         if (material.isAir()) {
             templateItem = ItemStack.empty();
             finalItem = templateItem;
@@ -204,7 +259,44 @@ public class Item {
             potionMeta.setColor(potionColor);
         }
 
+        // Data components
+        if (config != null) {
+            if (config.isBoolean("hide-tooltip")) {
+                meta.setHideTooltip(config.getBoolean("hide-tooltip"));
+            }
+
+            if (config.isBoolean("enchantment-glint-override")) {
+                meta.setEnchantmentGlintOverride(config.getBoolean("enchantment-glint-override"));
+            }
+
+            if (config.isInt("max-stack-size")) {
+                meta.setMaxStackSize(config.getInt("max-stack-size"));
+            }
+
+            if (config.isString("item-rarity")) {
+                try {
+                    meta.setRarity(ItemRarity.valueOf(config.getString("item-rarity")));
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (config.isString("tooltip-style")) {
+                meta.setTooltipStyle(NamespacedKey.fromString(config.getString("tooltip-style")));
+            }
+        }
+
         templateItem.setItemMeta(meta);
+
+        if (config != null) {
+            if (config.isInt("damage")) {
+                templateItem.setData(DataComponentTypes.DAMAGE, config.getInt("damage"));
+            }
+
+            if (config.isInt("max-damage")) {
+                templateItem.setData(DataComponentTypes.MAX_DAMAGE, config.getInt("max-damage"));
+            }
+        }
 
         // Final item, for general usage
         finalItem = templateItem.clone();
@@ -240,6 +332,9 @@ public class Item {
     }
 
     public ItemStack getItemStack(Player player, HashMap<String, Object> placeholders) {
+        // With permission
+        if (withPermission != null && player.hasPermission(withPermission)) return withPermissionItem.getItemStack(player, placeholders);
+
         if (!needsComponentParsing) return templateItem;
 
         if (placeholders != null) {
@@ -281,5 +376,9 @@ public class Item {
 
         item.setItemMeta(meta);
         return item;
+    }
+
+    public void performActions(InventoryClickEvent event) {
+        for (ItemAction action : actions) action.performAction(event);
     }
 }

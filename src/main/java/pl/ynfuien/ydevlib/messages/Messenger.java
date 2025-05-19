@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import pl.ynfuien.ydevlib.messages.colors.ColorFormatter;
 
 import java.util.HashMap;
@@ -60,7 +61,7 @@ public class Messenger {
         // Placeholders with all colors, formats, PAPI and also with escaped quotes
         Set<PluginPlaceholder> replaced = new HashSet<>();
         for (PluginPlaceholder placeholder : usedPlaceholders) {
-            if (placeholder.isFlagNoFormatting() || placeholder.isFlagNoAPI()) continue;
+            if (placeholder.isFlagNoFormatting() || placeholder.isFlagNoPAPI()) continue;
 
             String value = placeholder.value();
             message = message.replace(placeholder.exactMatch(), value);
@@ -75,7 +76,7 @@ public class Messenger {
 
         // Placeholders without parsed PAPI
         for (PluginPlaceholder placeholder : usedPlaceholders) {
-            if (!placeholder.isFlagNoAPI()) continue;
+            if (!placeholder.isFlagNoPAPI()) continue;
 
             String value = placeholder.value();
             message = message.replace(placeholder.exactMatch(), value);
@@ -113,13 +114,18 @@ public class Messenger {
         if (usedPlaceholders.isEmpty()) return text;
 
         for (PluginPlaceholder placeholder : usedPlaceholders) {
-            if (placeholder.isFlagNoFormatting() || placeholder.isFlagNoAPI()) continue;
+            if (placeholder.isFlagNoFormatting() || placeholder.isFlagNoPAPI()) continue;
 
             String value = placeholder.value();
             text = text.replace(placeholder.exactMatch(), value);
         }
 
         return text;
+    }
+
+
+    public static String parsePluginPlaceholdersAndPAPI(Player player, String text, HashMap<String, Object> placeholders) {
+        return ColorFormatter.parsePAPI(player, parsePluginPlaceholders(text, placeholders));
     }
 
     /**
@@ -184,7 +190,7 @@ public class Messenger {
         public String value() {
             return value;
         }
-        public boolean isFlagNoAPI() {
+        public boolean isFlagNoPAPI() {
             return flags.contains(PlaceholderFlag.NO_PAPI);
         }
         public boolean isFlagNoFormatting() {
